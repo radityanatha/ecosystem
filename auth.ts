@@ -20,17 +20,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string }
+        const pegawai = await prisma.pegawai.findUnique({
+          where: { email: credentials.email as string },
+          include: {
+            role: true,
+          },
         });
 
-        if (!user) {
+        if (!pegawai || pegawai.aktif !== "Y") {
           return null;
         }
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password as string,
-          user.password
+          pegawai.password
         );
 
         if (!isPasswordValid) {
@@ -38,9 +41,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
+          id: pegawai.id.toString(),
+          email: pegawai.email,
+          name: pegawai.namaPegawai,
+          roleId: pegawai.roleId?.toString(),
+          roleName: pegawai.role?.namaRole,
         };
       }
     })
@@ -52,12 +57,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        // Pakai any untuk skip type error - cara termudah!
+        (token as any).roleId = (user as any).roleId;
+        (token as any).roleName = (user as any).roleName;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token.id) {
+      if (session.user) {
         session.user.id = token.id as string;
+        (session.user as any).roleId = (token as any).roleId;
+        (session.user as any).roleName = (token as any).roleName;
       }
       return session;
     },

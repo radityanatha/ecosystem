@@ -1,0 +1,121 @@
+"use client";
+
+import * as React from "react";
+import {
+  Settings,
+  Shield,
+  Frame,
+  PieChart,
+  Map,
+  GalleryVerticalEnd,
+} from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail,
+} from "@/components/ui/sidebar";
+import { NavMain } from "@/components/nav-main";
+import { NavProjects } from "@/components/nav-projects";
+import { NavUser } from "@/components/nav-user";
+import { TeamSwitcher } from "@/components/team-switcher";
+import { getMenuItems, type MenuItem } from "@/lib/menus/index";
+
+export function AppSidebar({
+  aplikasiId,
+  namaAplikasi,
+  roleName,
+  userEmail,
+  userName,
+  userAvatar,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  aplikasiId: number;
+  namaAplikasi: string;
+  roleName?: string;
+  userEmail?: string;
+  userName?: string;
+  userAvatar?: string;
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [aplikasiList, setAplikasiList] = useState<any[]>([]);
+
+  // Ambil daftar aplikasi pegawai
+  useEffect(() => {
+    fetch("/api/pegawai/aplikasi")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setAplikasiList(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Ambil menu items berdasarkan aplikasiId dan roleName
+  const menuItems = getMenuItems(aplikasiId, roleName);
+
+  // Transform menu items untuk NavMain
+  const navMainItems = menuItems.map((item: MenuItem) => ({
+    title: item.title,
+    url: item.url,
+    icon: item.icon,
+    isActive: pathname === item.url,
+    items: [], // Bisa ditambahkan submenu nanti
+  }));
+
+  // Data teams untuk TeamSwitcher
+  const teams = [
+    {
+      name: namaAplikasi,
+      logo: GalleryVerticalEnd,
+      plan: roleName || "User",
+    },
+  ];
+
+  // Data projects (contoh)
+  const projects = [
+    {
+      name: "Design Engineering",
+      url: "/administrator/projects/design",
+      icon: Frame,
+    },
+    {
+      name: "Sales & Marketing",
+      url: "/administrator/projects/sales",
+      icon: PieChart,
+    },
+    {
+      name: "Travel",
+      url: "/administrator/projects/travel",
+      icon: Map,
+    },
+  ];
+
+  // Data user
+  const userData = {
+    name: userName || "User",
+    email: userEmail || "user@example.com",
+    avatar: userAvatar || "/avatars/default.jpg",
+  };
+
+  return (
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader>
+        <TeamSwitcher teams={teams} aplikasiList={aplikasiList} />
+      </SidebarHeader>
+      <SidebarContent>
+        <NavMain items={navMainItems} />
+        <NavProjects projects={projects} />
+      </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={userData} />
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  );
+}

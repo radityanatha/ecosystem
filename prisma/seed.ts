@@ -4,16 +4,21 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function seedRoles() {
-  const roles = [
+  const rolesData = [
     { id: 1, namaRole: "Administrator" },
     { id: 2, namaRole: "SuperAdmin" },
   ];
 
-  for (const role of roles) {
+  for (const data of rolesData) {
     await prisma.roles.upsert({
-      where: { namaRole: role.namaRole },
-      update: {},
-      create: { namaRole: role.namaRole },
+      where: { id: data.id },
+      update: {
+        namaRole: data.namaRole,
+      },
+      create: {
+        id: data.id,
+        namaRole: data.namaRole,
+      },
     });
   }
 }
@@ -59,9 +64,8 @@ async function seedAplikasi() {
 async function seedPegawai() {
   const hashedPassword = await bcrypt.hash("password123", 10);
 
-  const users = [
+  const pegawaiData = [
     {
-      id: "1",
       namaPegawai: "John Doe",
       tempatLahir: "Jakarta",
       tanggalLahir: new Date("1990-01-01"),
@@ -75,31 +79,64 @@ async function seedPegawai() {
       aktif: "Y",
       gantiPassword: "Y",
       foto: "https://via.placeholder.com/150",
-      aplikasiId: "1",
+      roleId: 1,
+      aplikasiIds: [1],  // Array - bisa 1 atau lebih
     },
     {
-      id: "2",
       namaPegawai: "Jane Doe",
-      tempatLahir: "Jakarta",
-      tanggalLahir: new Date("1990-01-01"),
-      alamat: "Jl. Raya No. 123",
-      masaKerjaTahun: 5,
-      masaKerjaBulan: 3,
+      tempatLahir: "Bandung",
+      tanggalLahir: new Date("1992-05-15"),
+      alamat: "Jl. Sudirman No. 456",
+      masaKerjaTahun: 3,
+      masaKerjaBulan: 6,
       statusPegawai: "PNS",
-      noHp: "081234567890",
+      noHp: "081987654321",
       email: "jane.doe@example.com",
       password: hashedPassword,
       aktif: "Y",
       gantiPassword: "Y",
       foto: "https://via.placeholder.com/150",
-      aplikasiId: "1",
+      roleId: 2,
+      aplikasiIds: [1, 2],
     },
-  ]
-  
+  ];
+
+  for (const data of pegawaiData) {
+    const { aplikasiIds, ...pegawaiDataWithoutApps } = data;
+
+    const pegawai = await prisma.pegawai.upsert({
+      where: { email: data.email },
+      update: {
+        namaPegawai: data.namaPegawai,
+        password: data.password,
+        roleId: data.roleId,
+      },
+      create: pegawaiDataWithoutApps,
+    });
+
+    if (aplikasiIds && Array.isArray(aplikasiIds) && aplikasiIds.length > 0) {
+      for (const aplikasiId of aplikasiIds) {
+        await prisma.pegawaiAplikasi.upsert({
+          where: {
+            pegawaiId_aplikasiId: {
+              pegawaiId: pegawai.id,
+              aplikasiId: aplikasiId,
+            },
+          },
+          update: {},
+          create: {
+            pegawaiId: pegawai.id,
+            aplikasiId: aplikasiId,
+          },
+        });
+      }
+    }
+  }
 }
 
 async function main() {
   await seedRoles();
+  await seedAplikasi();
   await seedPegawai();
 }
 
