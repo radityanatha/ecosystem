@@ -19,7 +19,6 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { NavMain } from "@/components/nav-main";
-import { NavProjects } from "@/components/nav-projects";
 import { NavUser } from "@/components/nav-user";
 import { TeamSwitcher } from "@/components/team-switcher";
 import { getMenuItems, type MenuItem } from "@/lib/menus/index";
@@ -77,25 +76,6 @@ export function AppSidebar({
     },
   ];
 
-  // Data projects (contoh)
-  const projects = [
-    {
-      name: "Design Engineering",
-      url: "/administrator/projects/design",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "/administrator/projects/sales",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "/administrator/projects/travel",
-      icon: Map,
-    },
-  ];
-
   // Data user
   const userData = {
     name: userName || "User",
@@ -110,7 +90,6 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMainItems} />
-        <NavProjects projects={projects} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={userData} />
