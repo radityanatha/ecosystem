@@ -3,59 +3,105 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-async function seedApplication() {
-  const roles = await prisma.role.upsert({
-    where: { id: "1" },
-    update: {},
-    create: {
-      name: "Administrator",
-    },
-  });
+async function seedRoles() {
+  const roles = [
+    { id: 1, namaRole: "Administrator" },
+    { id: 2, namaRole: "SuperAdmin" },
+  ];
+
+  for (const role of roles) {
+    await prisma.roles.upsert({
+      where: { namaRole: role.namaRole },
+      update: {},
+      create: { namaRole: role.namaRole },
+    });
+  }
 }
 
-async function seedRoles() {
-    const roles = [
-      { name: "Administrator" },
-      { name: "SuperAdmin" },
-    ];
-  
-    for (const role of roles) {
-      await prisma.role.upsert({
-        where: { name: role.name },
-        update: {},
-        create: { name: role.name },
-      });
-    }
-  }
+async function seedAplikasi() {
+  const aplikasiData = [
+    {
+      id: 1,
+      namaAplikasi: "Aplikasi Administrator",
+    },
+    {
+      id: 2,
+      namaAplikasi: "Aplikasi Keuangan",
+    },
+    {
+      id: 3,
+      namaAplikasi: "Aplikasi Purchasing",
+    },
+    {
+      id: 4,
+      namaAplikasi: "Aplikasi Logistik",
+    },
+    {
+      id: 5,
+      namaAplikasi: "Aplikasi HRD",
+    },
+  ];
 
-  async function seedUsers() {
-    const hashedPassword = await bcrypt.hash("password123", 10);
-    const adminRole = await prisma.role.findUnique({
-      where: { name: "Administrator" },
-    });
-  
-    await prisma.user.upsert({
-      where: { email: "admin@admin.com" },
-      update: {},
-      create: {
-        email: "admin@admin.com",
-        password: hashedPassword,
-        name: "Administrator",
-        roleId: adminRole?.id,
+  for (const data of aplikasiData) {
+    await prisma.aplikasi.upsert({
+      where: { id: data.id },
+      update: {
+        namaAplikasi: data.namaAplikasi,
       },
       create: {
-        email: "superadmin@superadmin.com",
-        password: hashedPassword,
-        name: "SuperAdmin",
-        roleId: superAdminRole?.id,
+        id: data.id,
+        namaAplikasi: data.namaAplikasi,
       },
     });
   }
+}
 
-  async function main() {
-    await seedRoles();
-    await seedUsers();
-  }
+async function seedPegawai() {
+  const hashedPassword = await bcrypt.hash("password123", 10);
+
+  const users = [
+    {
+      id: "1",
+      namaPegawai: "John Doe",
+      tempatLahir: "Jakarta",
+      tanggalLahir: new Date("1990-01-01"),
+      alamat: "Jl. Raya No. 123",
+      masaKerjaTahun: 5,
+      masaKerjaBulan: 3,
+      statusPegawai: "PNS",
+      noHp: "081234567890",
+      email: "john.doe@example.com",
+      password: hashedPassword,
+      aktif: "Y",
+      gantiPassword: "Y",
+      foto: "https://via.placeholder.com/150",
+      aplikasiId: "1",
+    },
+    {
+      id: "2",
+      namaPegawai: "Jane Doe",
+      tempatLahir: "Jakarta",
+      tanggalLahir: new Date("1990-01-01"),
+      alamat: "Jl. Raya No. 123",
+      masaKerjaTahun: 5,
+      masaKerjaBulan: 3,
+      statusPegawai: "PNS",
+      noHp: "081234567890",
+      email: "jane.doe@example.com",
+      password: hashedPassword,
+      aktif: "Y",
+      gantiPassword: "Y",
+      foto: "https://via.placeholder.com/150",
+      aplikasiId: "1",
+    },
+  ]
+  
+}
+
+async function main() {
+  await seedRoles();
+  await seedPegawai();
+}
 
 main()
   .catch((e) => {

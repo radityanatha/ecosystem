@@ -7,58 +7,76 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  emailVerified DateTime?
-  password      String    // hashed password
-  name          String?
-  image         String?
-  roleId        String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  accounts Account[]
-  sessions Session[]
-  
-  @@map("users")
-}
-
-model Role {
-  id        String   @id
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users User[]
-
-  @@map('roles)
-}
-
-model User {
-  id              String    @id @default(uuid())
-  email           String    @unique
-  emailVerified   DateTime?
+model Pegawai {
+  id              Int      @id @default(autoincrement())
+  namaPegawai     String   @map("nama_pegawai")
+  tempatLahir     String?  @map("tempat_lahir")
+  tanggalLahir    DateTime? @map("tanggal_lahir") @db.Date
+  alamat          String?
+  masaKerjaTahun  Int?     @map("masa_kerja_tahun")
+  masaKerjaBulan  Int?     @map("masa_kerja_bulan")
+  statusPegawai   String?  @default("PNS") @map("status_pegawai") @db.VarChar(20)
+  noHp            String?  @map("no_hp")
+  email           String?  @unique
   password        String
-  name            String?
-  image           String?
-  roleId          String?
-  role            Role?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  aktif           String?  @default("Y") @db.VarChar(1)
+  gantiPassword   String?  @default("Y") @map("ganti_password") @db.VarChar(1)
+  foto            String?
+  roleId          Int?     @map("role_id")
+  role            Roles?   @relation(fields: [roleId], references: [id])
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  accounts Account[]
-  sessions Session[]
+  aplikasi    PegawaiAplikasi[]
+  accounts    Account[]
+  sessions    Session[]
+  
+  @@map("pegawai")
+}
 
-  @map("users")
+model Aplikasi {
+  id            Int       @id @default(autoincrement()) @map("id_aplikasi")
+  namaAplikasi  String    @map("nama_aplikasi")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  pegawai PegawaiAplikasi[]
+
+  @@map("aplikasi")
+}
+
+// Junction table untuk many-to-many: Pegawai ↔ Aplikasi
+model PegawaiAplikasi {
+  id          String   @id @default(uuid())
+  pegawaiId   Int      @map("pegawai_id")
+  aplikasiId  Int      @map("aplikasi_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  pegawai  Pegawai  @relation(fields: [pegawaiId], references: [id], onDelete: Cascade)
+  aplikasi Aplikasi @relation(fields: [aplikasiId], references: [id], onDelete: Cascade)
+
+  @@unique([pegawaiId, aplikasiId])
+  @@map("pegawai_aplikasi")
+}
+
+model Roles {
+  id          Int      @id @default(autoincrement())
+  namaRole    String   @unique @map("nama_role")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  pegawai Pegawai[]
+
+  @@map("roles")
 }
 
 model Account {
   id                String   @id @default(uuid())
-  userId            String
+  userId            Int      @map("user_id")  // ← Reference ke Pegawai.id
   type              String
   provider          String
-  providerAccountId String
+  providerAccountId String   @map("provider_account_id")
   refresh_token     String?  @db.Text
   access_token      String?  @db.Text
   expires_at        Int?
@@ -67,7 +85,7 @@ model Account {
   id_token          String?  @db.Text
   session_state     String?
   
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user Pegawai @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -75,10 +93,10 @@ model Account {
 
 model Session {
   id           String   @id @default(uuid())
-  sessionToken String   @unique
-  userId       String
+  sessionToken String   @unique @map("session_token")
+  userId       Int      @map("user_id")  // ← Reference ke Pegawai.id
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         Pegawai  @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("sessions")
 }
