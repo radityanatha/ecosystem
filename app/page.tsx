@@ -33,5 +33,5 @@ export default async function Home() {
   }
 
   // Jika lebih dari 1 atau 0 → redirect ke gate untuk pilih
-  redirect("/gate");
+  redirect("/login/gate");
 }

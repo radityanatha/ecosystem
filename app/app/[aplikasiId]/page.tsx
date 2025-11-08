@@ -22,14 +22,14 @@ export default async function AplikasiPage({
   const aplikasiIdParam = resolvedParams?.aplikasiId;
   
   if (!aplikasiIdParam) {
-    redirect("/gate");
+    redirect("/login/gate");
   }
 
   const aplikasiId = parseInt(aplikasiIdParam);
 
   // Validasi jika aplikasiId bukan angka atau tidak valid
   if (isNaN(aplikasiId) || aplikasiId <= 0) {
-    redirect("/gate");
+    redirect("/login/gate");
   }
 
   // Cek apakah aplikasi adalah "Aplikasi Administrator" (id: 1)
@@ -43,7 +43,7 @@ export default async function AplikasiPage({
   });
 
   if (!aplikasi) {
-    redirect("/gate");
+    redirect("/login/gate");
   }
 
   return (
