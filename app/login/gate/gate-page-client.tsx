@@ -13,6 +13,7 @@ import {
   IconUsers,
   IconBriefcase,
   IconBuilding,
+  IconLogout,
 } from "@tabler/icons-react";
 
 interface Aplikasi {
@@ -51,7 +52,9 @@ function getIconForAplikasi(namaAplikasi: string) {
   if (lowerName.includes("perusahaan") || lowerName.includes("company")) {
     return <IconBuilding className="h-full w-full text-neutral-500 dark:text-neutral-300" />;
   }
-  
+  if (lowerName.includes("logout") || lowerName.includes("keluar")) {
+    return <IconLogout className="h-full w-full text-neutral-500 dark:text-neutral-300" />;
+  }
   // Default icon
   return <IconApps className="h-full w-full text-neutral-500 dark:text-neutral-300" />;
 }

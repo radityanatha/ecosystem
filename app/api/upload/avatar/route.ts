@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, unlink } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 import { getCurrentUser } from "@/lib/auth";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,16 +43,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buat folder jika belum ada
+    // Buat folder jika belum ada - path dinamis
     const uploadDir = join(process.cwd(), "public", "uploads", "avatars");
     if (!existsSync(uploadDir)) {
       await mkdir(uploadDir, { recursive: true });
     }
 
-    // Generate unique filename
+    // Ambil foto lama dari database untuk dihapus nanti
+    const pegawai = await prisma.pegawai.findUnique({
+      where: { id: parseInt(user.id as string) },
+      select: { foto: true },
+    });
+
+    // Generate unique filename dengan format: userId-timestamp.extension
     const timestamp = Date.now();
     const userId = user.id;
-    const fileExtension = file.name.split(".").pop();
+    const fileExtension = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const fileName = `${userId}-${timestamp}.${fileExtension}`;
     const filePath = join(uploadDir, fileName);
 
@@ -58,7 +67,20 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
     await writeFile(filePath, buffer);
 
-    // Return path untuk disimpan di database
+    // Hapus foto lama jika ada dan bukan default
+    if (pegawai?.foto && pegawai.foto.startsWith("/uploads/avatars/")) {
+      const oldFilePath = join(process.cwd(), "public", pegawai.foto);
+      if (existsSync(oldFilePath)) {
+        try {
+          await unlink(oldFilePath);
+        } catch (error) {
+          console.error("Error deleting old avatar:", error);
+          // Tidak throw error, karena foto baru sudah tersimpan
+        }
+      }
+    }
+
+    // Return path untuk disimpan di database (path relatif dari public)
     const fileUrl = `/uploads/avatars/${fileName}`;
 
     return NextResponse.json({

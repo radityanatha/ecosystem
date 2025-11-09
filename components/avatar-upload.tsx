@@ -93,7 +93,7 @@ export function AvatarUpload({
       <div className="flex items-center gap-4">
         <Avatar className="h-24 w-24">
           <AvatarImage
-            src={preview || avatarUrl || "/avatars/default.jpg"}
+            src={preview || (avatarUrl ? (avatarUrl.startsWith("/") ? avatarUrl : `/uploads/avatars/${avatarUrl}`) : undefined)}
             alt={currentName}
           />
           <AvatarFallback className="text-2xl">

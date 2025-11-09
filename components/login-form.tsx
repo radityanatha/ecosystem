@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TypewriterEffectSmooth } from "@/components/ui/typewriter-effect";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
@@ -30,6 +31,22 @@ export function LoginForm({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const words = [
+    {
+      text: "Flourish",
+    },
+    {
+      text: "together",
+    },
+    {
+      text: "with",
+    },
+    {
+      text: "Ecosystem.",
+      className: "text-purple-500 dark:text-purple-500",
+    },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,17 +87,22 @@ export function LoginForm({
     }
   };
 
+  
+
   return (
-    <div className={cn("flex flex-col gap-6 w-full max-w-[450px]", className)} {...props}>
-      <Card className="relative overflow-hidden border-0 bg-gray-950 p-0 shadow-none">
+    <div className={cn("flex flex-col items-center w-full max-w-[450px]", className)} {...props}>
+      <div className="flex flex-col items-center text-center mb-10 w-full">
+        <TypewriterEffectSmooth words={words} />
+      </div>
+
+      <Card className="relative overflow-hidden border-0 bg-gray-950 p-0 shadow-none w-full">
         <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
         
         <CardContent className="p-6 md:p-8">
           <form onSubmit={handleSubmit}>
             <FieldGroup>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="text-2xl font-bold text-white">Welcome back</h1>
-                <p className="text-balance text-gray-300">
+              <div className="flex flex-col items-center gap-2 text-center mb-4">
+                <p className="text-gray-300 text-sm">
                   Login to your account
                 </p>
               </div>

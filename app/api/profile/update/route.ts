@@ -24,19 +24,26 @@ export async function PUT(request: NextRequest) {
     } = body;
 
     // Update data pegawai
+    // Pastikan foto selalu diupdate jika ada di body (termasuk string kosong untuk hapus foto)
+    const updateData: any = {
+      ...(namaPegawai && { namaPegawai }),
+      ...(email && { email }),
+      ...(noHp !== undefined && { noHp }),
+      ...(tempatLahir !== undefined && { tempatLahir }),
+      ...(tanggalLahir && {
+        tanggalLahir: new Date(tanggalLahir),
+      }),
+      ...(alamat !== undefined && { alamat }),
+    };
+
+    // Update foto jika ada di body (bisa string kosong untuk hapus, atau path baru)
+    if (foto !== undefined) {
+      updateData.foto = foto || null;
+    }
+
     const updatedPegawai = await prisma.pegawai.update({
       where: { id: parseInt(user.id as string) },
-      data: {
-        ...(namaPegawai && { namaPegawai }),
-        ...(email && { email }),
-        ...(noHp !== undefined && { noHp }),
-        ...(tempatLahir !== undefined && { tempatLahir }),
-        ...(tanggalLahir && {
-          tanggalLahir: new Date(tanggalLahir),
-        }),
-        ...(alamat !== undefined && { alamat }),
-        ...(foto && { foto }),
-      },
+      data: updateData,
       select: {
         id: true,
         namaPegawai: true,

@@ -59,13 +59,19 @@ export function AppSidebar({
   const menuItems = getMenuItems(aplikasiId, roleName);
 
   // Transform menu items untuk NavMain
-  const navMainItems = menuItems.map((item: MenuItem) => ({
-    title: item.title,
-    url: item.url,
-    icon: item.icon,
-    isActive: pathname === item.url,
-    items: [], // Bisa ditambahkan submenu nanti
-  }));
+  const navMainItems = menuItems.map((item: MenuItem) => {
+    // Active jika pathname sama dengan url atau dimulai dengan url + "/" (untuk nested routes)
+    const isActive = pathname === item.url || 
+      (pathname.startsWith(item.url + "/") && item.url !== "/");
+    
+    return {
+      title: item.title,
+      url: item.url,
+      icon: item.icon,
+      isActive,
+      items: [], // Bisa ditambahkan submenu nanti
+    };
+  });
 
   // Data teams untuk TeamSwitcher
   const teams = [
@@ -83,8 +89,11 @@ export function AppSidebar({
     avatar: userAvatar || "/avatars/default.jpg",
   };
 
+  // Cek apakah sedang di halaman dashboard
+  const isDashboardPage = pathname === "/administrator/dashboard";
+
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible={isDashboardPage ? undefined : "icon"} {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={teams} aplikasiList={aplikasiList} />
       </SidebarHeader>
