@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, X } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface AvatarUploadProps {
@@ -87,6 +88,20 @@ export function AvatarUpload({
     setFile(null);
     setPreview("");
   };
+
+  if (uploading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-24 w-24 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-3 w-48" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

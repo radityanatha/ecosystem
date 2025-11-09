@@ -22,6 +22,7 @@ import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import { TeamSwitcher } from "@/components/team-switcher";
 import { getMenuItems, type MenuItem } from "@/lib/menus/index";
+import { NavUserSkeleton } from "@/components/skeletons/nav-user-skeleton";
 
 export function AppSidebar({
   aplikasiId,
@@ -42,9 +43,11 @@ export function AppSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const [aplikasiList, setAplikasiList] = useState<any[]>([]);
+  const [loadingAplikasi, setLoadingAplikasi] = useState(true);
 
   // Ambil daftar aplikasi pegawai
   useEffect(() => {
+    setLoadingAplikasi(true);
     fetch("/api/pegawai/aplikasi")
       .then((res) => res.json())
       .then((data) => {
@@ -52,7 +55,10 @@ export function AppSidebar({
           setAplikasiList(data);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        setLoadingAplikasi(false);
+      });
   }, []);
 
   // Ambil menu items berdasarkan aplikasiId dan roleName
@@ -101,7 +107,11 @@ export function AppSidebar({
         <NavMain items={navMainItems} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={userData} />
+        {loadingAplikasi ? (
+          <NavUserSkeleton />
+        ) : (
+          <NavUser user={userData} />
+        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
