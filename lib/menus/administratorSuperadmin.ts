@@ -8,9 +8,9 @@ export const administratorMenus = {
       icon: BarChart3,
     },
     {
-      title: "Kelola Aplikasi",
-      url: "/administrator/aplikasi",
-      icon: Settings,
+      title: "Kelola Pegawai",
+      url: "/administrator/pegawai",
+      icon: Users,
     },
     {
       title: "Kelola Roles",

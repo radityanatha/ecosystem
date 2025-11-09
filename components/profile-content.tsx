@@ -30,7 +30,7 @@ interface ProfileContentProps {
 export function ProfileContent({ pegawai }: ProfileContentProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Header untuk BentoGrid - Foto Profile
+  // Header untuk Foto Profile
   const ProfileHeader = () => (
     <div className="flex items-center justify-center p-6">
       <Avatar className="h-24 w-24 md:h-28 md:w-28">
