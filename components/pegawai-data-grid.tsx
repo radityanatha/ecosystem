@@ -2,10 +2,6 @@
 
 import { useMemo, useState, useEffect } from 'react';
 
-import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
-
-import { Alert, AlertIcon, AlertTitle } from '@/components/ui/alert';
-
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 import { Badge } from '@/components/ui/badge';
@@ -24,8 +20,6 @@ import { DataGridPagination } from '@/components/ui/data-grid/data-grid-paginati
 
 import {
   DataGridTable,
-  DataGridTableRowSelect,
-  DataGridTableRowSelectAll,
 } from '@/components/ui/data-grid/data-grid-table';
 
 import {
@@ -56,7 +50,19 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 
-import { Ellipsis, Filter, Search, UserRoundPlus, X, CheckCircle2 } from 'lucide-react';
+import { Ellipsis, Filter, Search, UserRoundPlus, X } from 'lucide-react';
+
+import { PegawaiFormModal } from "@/components/pegawai-form-modal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface IPegawai {
   id: string;
@@ -73,47 +79,33 @@ interface IPegawai {
   createdAt: string;
 }
 
-function ActionsCell({ row }: { row: Row<IPegawai> }) {
-  const { copy } = useCopyToClipboard();
-  const [showToast, setShowToast] = useState(false);
-
-  const handleCopyId = () => {
-    copy(row.original.id);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
-  };
-
+function ActionsCell({ 
+  row, 
+  onEdit, 
+  onDelete 
+}: { 
+  row: Row<IPegawai>;
+  onEdit: (pegawai: IPegawai) => void;
+  onDelete: (pegawai: IPegawai) => void;
+}) {
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Ellipsis className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="bottom" align="end">
-          <DropdownMenuItem onClick={() => {}}>Edit</DropdownMenuItem>
-          <DropdownMenuItem onClick={handleCopyId}>Copy ID</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem 
-            className="text-destructive focus:text-destructive" 
-            onClick={() => {}}
-          >
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {showToast && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-          <Alert variant="mono" icon="primary">
-            <AlertIcon>
-              <CheckCircle2 className="h-4 w-4" />
-            </AlertIcon>
-            <AlertTitle>Employee ID successfully copied: {row.original.id}</AlertTitle>
-          </Alert>
-        </div>
-      )}
-    </>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Ellipsis className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="bottom" align="end">
+        <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem 
+          className="text-destructive focus:text-destructive" 
+          onClick={() => onDelete(row.original)}
+        >
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -129,6 +121,10 @@ export default function DataGridDemo() {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [selectedPegawai, setSelectedPegawai] = useState<IPegawai | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [pegawaiToDelete, setPegawaiToDelete] = useState<IPegawai | null>(null);
 
   // Debounced search query
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
@@ -199,23 +195,87 @@ export default function DataGridDemo() {
     );
   };
 
-  const [columnOrder, setColumnOrder] = useState<string[]>(['id', 'name', 'email', 'role', 'status', 'actions']);
+  // Function to refresh data
+  const refreshData = () => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: (pagination.pageIndex + 1).toString(),
+          pageSize: pagination.pageSize.toString(),
+          ...(debouncedSearchQuery && { search: debouncedSearchQuery }),
+          ...(selectedStatuses.length > 0 && { status: selectedStatuses[0] }),
+        });
+
+        const response = await fetch(`/api/administrator/pegawai?${params}`);
+        const result = await response.json();
+
+        if (response.ok) {
+          setData(result.data);
+          setTotal(result.total);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  };
+
+  // Handle create
+  const handleCreate = () => {
+    setSelectedPegawai(null);
+    setIsFormModalOpen(true);
+  };
+
+  // Handle edit
+  const handleEdit = (pegawai: IPegawai) => {
+    setSelectedPegawai(pegawai);
+    setIsFormModalOpen(true);
+  };
+
+  // Handle delete
+  const handleDelete = (pegawai: IPegawai) => {
+    setPegawaiToDelete(pegawai);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!pegawaiToDelete) return;
+
+    try {
+      const response = await fetch(
+        `/api/administrator/pegawai?id=${pegawaiToDelete.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setIsDeleteDialogOpen(false);
+        setPegawaiToDelete(null);
+        refreshData();
+      } else {
+        alert(result.error || "Gagal menghapus pegawai");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Terjadi kesalahan saat menghapus pegawai");
+    }
+  };
+
+  const [columnOrder, setColumnOrder] = useState<string[]>(['name', 'role', 'status', 'actions']);
 
   const columns = useMemo<ColumnDef<IPegawai>[]>(
     () => [
       {
-        accessorKey: 'id',
-        id: 'id',
-        header: ({ table }) => <DataGridTableRowSelectAll table={table} />,
-        cell: ({ row }) => <DataGridTableRowSelect row={row} />,
-        enableSorting: false,
-        size: 35,
-        enableResizing: false,
-      },
-      {
         accessorKey: 'name',
         id: 'name',
-        header: ({ column }) => <DataGridColumnHeader title="Nama Pegawai" visibility={true} column={column} />,
+        header: ({ column }) => <DataGridColumnHeader title="Nama Pegawai" visibility={false} column={column} />,
         cell: ({ row }) => {
           return (
             <div className="flex items-center gap-3">
@@ -241,21 +301,21 @@ export default function DataGridDemo() {
       {
         accessorKey: 'role',
         id: 'role',
-        header: ({ column }) => <DataGridColumnHeader title="Role" visibility={true} column={column} />,
+        header: ({ column }) => <DataGridColumnHeader title="Role" visibility={false} column={column} />,
         cell: ({ row }) => {
           return (
             <div className="font-medium text-foreground">{row.original.role}</div>
           );
         },
         size: 150,
-        enableSorting: true,
+        enableSorting: false,
         enableHiding: true,
         enableResizing: true,
       },
       {
         accessorKey: 'status',
         id: 'status',
-        header: ({ column }) => <DataGridColumnHeader title="Status" visibility={true} column={column} />,
+        header: ({ column }) => <DataGridColumnHeader title="Status" visibility={false} column={column} />,
         cell: ({ row }) => {
           const status = row.original.status;
 
@@ -274,14 +334,14 @@ export default function DataGridDemo() {
           }
         },
         size: 100,
-        enableSorting: true,
+        enableSorting: false,
         enableHiding: true,
         enableResizing: true,
       },
       {
         id: 'actions',
         header: '',
-        cell: ({ row }) => <ActionsCell row={row} />,
+        cell: ({ row }) => <ActionsCell row={row} onEdit={handleEdit} onDelete={handleDelete} />,
         size: 60,
         enableSorting: false,
         enableHiding: false,
@@ -315,120 +375,154 @@ export default function DataGridDemo() {
   });
 
   return (
-    <DataGrid
-      table={table}
-      recordCount={total}
-      tableLayout={{
-        columnsPinnable: true,
-        columnsResizable: true,
-        columnsMovable: true,
-        columnsVisibility: true,
-      }}
-    >
-      <Card>
-        <CardHeader className="py-4">
-          <div className="flex items-center justify-between gap-4">
-            <CardHeading className="flex-1">
-              <div className="flex items-center gap-2.5">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search nama atau email..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                  {searchQuery.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1.5 top-1/2 h-6 w-6 -translate-y-1/2"
-                      onClick={() => setSearchQuery('')}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline">
-                      <Filter className="h-4 w-4" />
-                      Status
-                      {selectedStatuses.length > 0 && (
-                        <Badge size="sm" appearance="outline" className="ml-2">
-                          {selectedStatuses.length}
-                        </Badge>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-40 p-3" align="start">
-                    <div className="space-y-3">
-                      <div className="text-xs font-medium text-muted-foreground">Filters</div>
+    <>
+      <DataGrid
+        table={table}
+        recordCount={total}
+        tableLayout={{
+          columnsPinnable: true,
+          columnsResizable: true,
+          columnsMovable: true,
+          columnsVisibility: false,
+        }}
+      >
+        <Card>
+          <CardHeader className="py-4">
+            <div className="flex items-center justify-between gap-4">
+              <CardHeading className="flex-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search nama atau email..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                    {searchQuery.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1.5 top-1/2 h-6 w-6 -translate-y-1/2"
+                        onClick={() => setSearchQuery('')}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline">
+                        <Filter className="h-4 w-4" />
+                        Status
+                        {selectedStatuses.length > 0 && (
+                          <Badge size="sm" appearance="outline" className="ml-2">
+                            {selectedStatuses.length}
+                          </Badge>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-40 p-3" align="start">
                       <div className="space-y-3">
-                        <div className="flex items-center gap-2.5">
-                          <Checkbox
-                            id="Active"
-                            checked={selectedStatuses.includes('Active')}
-                            onCheckedChange={(checked) => handleStatusChange(checked === true, 'Active')}
-                          />
-                          <Label
-                            htmlFor="Active"
-                            className="flex grow items-center justify-between font-normal gap-1.5"
-                          >
-                            Active
-                            <span className="text-muted-foreground">{statusCounts['Active'] || 0}</span>
-                          </Label>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          <Checkbox
-                            id="Inactive"
-                            checked={selectedStatuses.includes('Inactive')}
-                            onCheckedChange={(checked) => handleStatusChange(checked === true, 'Inactive')}
-                          />
-                          <Label
-                            htmlFor="Inactive"
-                            className="flex grow items-center justify-between font-normal gap-1.5"
-                          >
-                            Inactive
-                            <span className="text-muted-foreground">{statusCounts['Inactive'] || 0}</span>
-                          </Label>
+                        <div className="text-xs font-medium text-muted-foreground">Filters</div>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2.5">
+                            <Checkbox
+                              id="Active"
+                              checked={selectedStatuses.includes('Active')}
+                              onCheckedChange={(checked) => handleStatusChange(checked === true, 'Active')}
+                            />
+                            <Label
+                              htmlFor="Active"
+                              className="flex grow items-center justify-between font-normal gap-1.5"
+                            >
+                              Active
+                              <span className="text-muted-foreground">{statusCounts['Active'] || 0}</span>
+                            </Label>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <Checkbox
+                              id="Inactive"
+                              checked={selectedStatuses.includes('Inactive')}
+                              onCheckedChange={(checked) => handleStatusChange(checked === true, 'Inactive')}
+                            />
+                            <Label
+                              htmlFor="Inactive"
+                              className="flex grow items-center justify-between font-normal gap-1.5"
+                            >
+                              Inactive
+                              <span className="text-muted-foreground">{statusCounts['Inactive'] || 0}</span>
+                            </Label>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </CardHeading>
-            <CardToolbar>
-              <Button>
-                <UserRoundPlus className="h-4 w-4" />
-                Add new
-              </Button>
-            </CardToolbar>
-          </div>
-        </CardHeader>
-        <CardTable>
-          <ScrollArea className="h-[calc(100vh-400px)] min-h-[400px]">
-            {loading ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="text-muted-foreground">Loading...</div>
-              </div>
-            ) : data.length === 0 ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="text-muted-foreground">No data found</div>
-              </div>
-            ) : (
-              <>
-                <DataGridTable table={table} />
-                <ScrollBar orientation="horizontal" />
-              </>
-            )}
-          </ScrollArea>
-        </CardTable>
-        <CardFooter className="border-t py-3">
-          <DataGridPagination table={table} total={total} />
-        </CardFooter>
-      </Card>
-    </DataGrid>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </CardHeading>
+              <CardToolbar>
+                <Button onClick={handleCreate}>
+                  <UserRoundPlus className="h-4 w-4" />
+                  Add new
+                </Button>
+              </CardToolbar>
+            </div>
+          </CardHeader>
+          <CardTable>
+            <ScrollArea className="h-[calc(100vh-400px)] min-h-[400px]">
+              {loading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-muted-foreground">Loading...</div>
+                </div>
+              ) : data.length === 0 ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-muted-foreground">No data found</div>
+                </div>
+              ) : (
+                <>
+                  <DataGridTable table={table} />
+                  <ScrollBar orientation="horizontal" />
+                </>
+              )}
+            </ScrollArea>
+          </CardTable>
+          <CardFooter className="border-t py-3">
+            <DataGridPagination table={table} total={total} />
+          </CardFooter>
+        </Card>
+      </DataGrid>
+
+      {/* Form Modal */}
+      <PegawaiFormModal
+        open={isFormModalOpen}
+        onOpenChange={setIsFormModalOpen}
+        onSuccess={refreshData}
+        pegawai={selectedPegawai}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Pegawai?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus pegawai{" "}
+              <strong>{pegawaiToDelete?.name}</strong>? Tindakan ini tidak dapat
+              dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
+ 

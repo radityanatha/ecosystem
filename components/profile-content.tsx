@@ -110,17 +110,6 @@ export function ProfileContent({ pegawai }: ProfileContentProps) {
           </div>
         )}
 
-        {/* Status Pegawai */}
-        {pegawai.statusPegawai && (
-          <div className="flex items-start gap-2">
-            <User className="h-3.5 w-3.5 mt-0.5 text-neutral-400 flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-0.5">Status</p>
-              <p className="text-sm text-neutral-700 dark:text-neutral-300">{pegawai.statusPegawai}</p>
-            </div>
-          </div>
-        )}
-
         {/* Masa Kerja */}
         {(pegawai.masaKerjaTahun || pegawai.masaKerjaBulan) && (
           <div className="flex items-start gap-2">
